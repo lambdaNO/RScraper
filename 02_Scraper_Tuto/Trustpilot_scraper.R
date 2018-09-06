@@ -16,7 +16,7 @@ library(lubridate) # Permet de manipuler plus facilement des données de type Da
 ###############################################################
 ### Déclaration de l'URL - Travaille sur le site Trustpilot.com rassemblant des avis sur un multitudes d'entreprises
 ### Le tuto se base sur l'analyse de la cie Amazon. Aujourd'hui 189 pages de commentaires 
-url <-'http://www.trustpilot.com/review/www.amazon.com'
+## url <-'http://www.trustpilot.com/review/www.amazon.com'
 ### Objectif : Créer un programme qui
 ###   1) Trouve le maximum de page à interroger
 ###   2) Génère l'ensemble des sous pages (i.e. les 189 pages) associée à une entreprise
@@ -50,13 +50,13 @@ get_last_page <- function(html){
                 as.numeric()
 } 
 ### Test de la fonction get_last_page
-first_page <- read_html(url)
-latest_page_numb <- get_last_page(first_page)
+## first_page <- read_html(url)
+## latest_page_numb <- get_last_page(first_page)
 ###############################################################
 ### 2) Génèrer l'ensemble des sous pages (i.e. les 189 pages) associée à une entreprise
 ### Maintenant que l'on connait ce paramètre, on peut générer une structure pour contenir l'ensemble des sous pages
 ### list_of_page est un vecteur contenant l'ensemble des urls qu'il faudra visiter
-list_of_pages <- str_c(url,'?page=',1:latest_page_numb);head(list_of_pages,5)
+## list_of_pages <- str_c(url,'?page=',1:latest_page_numb);head(list_of_pages,5)
 ###############################################################
 ### 3) Extraire les informations sur les pages : Analyse de la classe star-rating, review body et récupération des datetime
 ### On souhaite extraire le texte de la critique, la note, le nom de l'auteur et l'heure de soumission de toutes les critiques sur une sous page
@@ -146,22 +146,25 @@ get_star_rating <-function(html){
 ###############################################################
 ### 4) Synthèse des données - Ajout d'un champ : "nom de la compagnie"
 get_data_table <- function(html,cie_name){
+  prgs <- ""
   ## Extaction des données avec les fonctions définies plus haut
   reviews <- get_reviews(html)
-  print(c("1 - ",length(reviews)))
-  
   reviewer_names <- get_reviewer_names(html)
+  ## On se rend compte en pratique qu'il est possible d'avoir un nombre de rédacteurs supérieur à celui du nombre de critique ce qui génère des vecteurs de tailles différentes (et donc une impossibilité de générer un tibble)
+  ## Une solution pour résoudre rapidement ce problème (assez sale je l'avoue) est de supprimer la dernière valeur du nom des rédacteurs.
+  ## Pour le moment, seul le cas d'une différence d'un nom s'est présenté; la fonction devra être retravaillé pour permettre de gérer plus de cas posant problème ... (e.g. calculer la différence et compléter cette dernière par des NA dans les vecteur)
   if(length(reviewer_names) != length(reviews)){
-    print("Problème")
+    prgs <- c(prgs, "!")
     reviewer_names <- reviewer_names[-length(reviewer_names)]
   }
-  print(c("2 - ",length(reviewer_names)))
+  # print(c("2 - ",length(reviewer_names)))
+  
   dates <- get_review_dates(html)
-  print(c("3 - ",length(dates)))
   ratings <- get_star_rating(html)[-1] ## (ici : *)
-  print(c("4 - ",length(ratings)))
+  prgs <- c(prgs, "#")
+  ## Permet surtout de vérifier si ça n'a pas crashé
+  cat(prgs)
   ## Création du tibble
-  print("---")
   combined_data <- tibble(reviewer = reviewer_names, 
                    date = dates,       
                    rating = ratings,
@@ -171,16 +174,14 @@ get_data_table <- function(html,cie_name){
                 mutate(company = cie_name) %>%
                 select(company, reviewer,date,rating,review)
 }
-exExtrac <- get_data_table(first_page,'amazon');exExtrac
-remove(exExtrac)
+## exExtrac <- get_data_table(first_page,'amazon');exExtrac
+## remove(exExtrac)
 ### Et plus rapidement
 get_data_from_url <- function(url, company_name){
       html <- read_html(url)
       get_data_table(html, company_name)
 }
-url <-'http://www.trustpilot.com/review/www.amazon.com'
-
-L <- get_data_from_url(url, 'amazon');L
+## L <- get_data_from_url(url, 'amazon');L
 ###############################################################
 ### On va maintenant appliquer la même méthode de récupération depuis un URL mais cette fois ci en explorant toutes les sous pages que l'on a définit plus tôt dans list_of_pages
 ### Plutôt que de faire bêtement une boucle for, on va appliquer la fonction map() du package purrr
@@ -200,15 +201,12 @@ scrape_write_table <- function(url,cie_name){
       # Write a tab-separated file
       write_tsv(str_c(cie_name,'.tsv'))  
 }
-
-
-
-
+### Note : Tab-separated values (TSV) est un format texte ouvert représentant des données tabulaires sous forme de « valeurs séparées par des tabulations ».
 
 ### Bon maintenant, on a besoin de renseigner :
 ###   - L'URL de la page d'accueil : url <-'http://www.trustpilot.com/review/www.amazon.com'
 ###   - Le nom de la compagnie qu'on souhaite scraper 'amazon'
 ### Et on obtient un tibble complet avec les données pour chaque pages de critiques
-urlFR <- 'https://fr.trustpilot.com/review/www.amazon.com?languages=en'
-scrape_write_table(urlFR,'amazon')
-
+## urlFR <- 'https://fr.trustpilot.com/review/www.amazon.com?languages=en'
+## scrape_write_table(urlFR,'amazon')
+## amz_tbl <- read_tsv('amazon.tsv');head(amz_tbl)

@@ -8,3 +8,4 @@ Analyse d'articles et implémentations de méthode permettant de réaliser de l'
 ###### Problèmes rencontrés en attentes de solution
   - *MU_Notes_Cariou* : Application de fonctions pour résumer des valeurs
   - *MU_Exo5_Cariou* : Construction de nouvelles variables Problème transformation d'un type factor (levels) en date avec la fonction as.Date(x,format="")
+  - *Trustpilot_scraper* : Problème de de différences entre les nombre critique et le nombre de reviewers pour une variation >= 2. Implémenter une méthode pour régler ce problème.
