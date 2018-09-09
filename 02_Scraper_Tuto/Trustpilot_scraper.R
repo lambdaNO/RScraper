@@ -15,15 +15,15 @@ library(lubridate) # Permet de manipuler plus facilement des données de type Da
 ## Par exemple, le site internet avait changé l'ensemble de ses balises HTML; On ne pouvait donc plus rien scraper
 ###############################################################
 ### Déclaration de l'URL - Travaille sur le site Trustpilot.com rassemblant des avis sur un multitudes d'entreprises
-### Le tuto se base sur l'analyse de la cie Amazon. Aujourd'hui 189 pages de commentaires 
+### Le tuto se base sur l'analyse de la cie Amazon. Aujourd'hui 189 pages de commentaires
 ## url <-'http://www.trustpilot.com/review/www.amazon.com'
 ### Objectif : Créer un programme qui
 ###   1) Trouve le maximum de page à interroger
 ###   2) Génère l'ensemble des sous pages (i.e. les 189 pages) associée à une entreprise
 ###   3) Récupère l'information voulu sur ces sous pages
-###   4) Synthétise les données 
+###   4) Synthétise les données
 ### 1) Récupération du nombre de page. Idée : Se baser sur la structure du code source de la page HTML.
-### Structure standard d'une donnée HTML : 
+### Structure standard d'une donnée HTML :
 ###     < Tag  Attribute_1 = Value_1 Attribute_2 = Value_2 ...>
 ###       The tagged data
 ###     <\Tag>
@@ -33,7 +33,7 @@ library(lubridate) # Permet de manipuler plus facilement des données de type Da
 ###     html_text() : retourne les données contenues dans la balise
 ###     html_attrs() : retourne les attribus de la balise
 ### Note : On récupère l'ensemble de ces données en ouvrant un inspecteur de page depuis n'importe quel navigteur.
-### - Récupération du nombre de page 
+### - Récupération du nombre de page
 ###   En ouvrant l'inspeceur sur le bouton "page suivante", on trouve que la classe associé à cet objet est : 'pagination-page'
 ###   On peut donc définir une fonction permettant de récupérer la valeur maximale.
 get_last_page <- function(html){
@@ -48,7 +48,7 @@ get_last_page <- function(html){
                 unname() %>%
                 ## On s'assure de bien retourner un format numérique
                 as.numeric()
-} 
+}
 ### Test de la fonction get_last_page
 ## first_page <- read_html(url)
 ## latest_page_numb <- get_last_page(first_page)
@@ -63,7 +63,7 @@ get_last_page <- function(html){
 ### On va donc écrire une fonction d'extraction pour chaque type de données
 ### Pour les critiques (.review-body) (une div)
 get_reviews <- function(html){
-  html %>% 
+  html %>%
       html_nodes('.review-info__body__text') %>%
       html_text() %>%
       ## str_trim() removes whitespace from start and end of string;
@@ -87,22 +87,22 @@ get_reviewer_names <- function(html){
 #### <span title="2018-07-29T20:44:38.000+00:00"></span>
 #### </time>
 get_review_dates <- function(html){
-  status <-html %>% 
+  status <-html %>%
         html_nodes('time') %>%
         ## On ne s'intéresse plus au texte mais aux valeurs des atributs.
         html_attrs() %>%
-        ## On souhaite récupérer le second attribut 
+        ## On souhaite récupérer le second attribut
         map(2) %>%
         unlist()
   dates <- html %>%
         html_nodes('time') %>%
         html_attrs() %>%
-        ## On souhaite recupérer le premier attribut 
+        ## On souhaite recupérer le premier attribut
         map(1) %>%
         unlist()
   ### Maintenant, on peut empacter le tout dans un dataframe (e.g. un tibble : Tibbles are a modern take on data frames. They keep the features that have stood the test of time, and drop the features that used to be convenient but are now frustrating (i.e. converting character vectors to factors).)
   return_dates <- tibble(status = status, dates = dates) %>%
-    ## Visiblement la classe ndate permet de spécifier si une review est actuelle  
+    ## Visiblement la classe ndate permet de spécifier si une review est actuelle
     filter(status == "ndate") %>%
     pull(dates) %>%
     ## Convert DateTimes to POSIX objects (standardisation des interfaces de programmation des logiciels destinés à fonctionner sur les variantes du système d'exploitation UNIX - Les quatre premières lettres forment l’acronyme de Portable Operating System Interface (interface portable de système d'exploitation), et le X exprime l'héritage UNIX. )
@@ -121,20 +121,20 @@ get_review_dates <- function(html){
 ### Pour manipuler les regexp avec R, il existe le package rebus qui permet de décomposer une expression en sous motifs à l'aide de l'opérateur %R% pour ensuite composer des regexp plus complexes.
 get_star_rating <-function(html){
   ## Définitin du modèle de regexp.
-  pattern = 'star-rating-' %R% capture(DIGIT) 
+  pattern = 'star-rating-' %R% capture(DIGIT)
   ratings <- html %>%
-          html_nodes('.star-rating') %>% 
+          html_nodes('.star-rating') %>%
           html_attrs() %>%
           ## Vectorised over string and pattern. For str_match, a character matrix. First column is the complete match, followed by one column for each capture group.
           map(str_match,pattern = pattern) %>%
-          ## str_match[1] is the fully matched string, the second entry is the part you extract with the capture in your pattern  
-          ## On veut donc récupérer le second membre 
+          ## str_match[1] is the fully matched string, the second entry is the part you extract with the capture in your pattern
+          ## On veut donc récupérer le second membre
           map(2) %>%
           unlist()
   ## Ici, la structure du site (et l'utilisation de la classe .star_rating) ajoute un élément supplémentaire au vecteur (l'élément 0 (qui provient de l'échelle invitant l'utilisateur à saisir une note)).
   ## On doit donc le supprimer. Mais visblement, dans la fonction ça semble étrangement assez compliqué.
   ## On va donc faire ça de manière assez moche et le faire à l'exterieur (ici : *)
-  ratings[2:length(ratings)]    
+  ratings[2:length(ratings)]
 }
 ## Test des fonctions définies
 ### simple_url <- list_of_pages[1]
@@ -158,15 +158,15 @@ get_data_table <- function(html,cie_name){
     reviewer_names <- reviewer_names[-length(reviewer_names)]
   }
   # print(c("2 - ",length(reviewer_names)))
-  
+
   dates <- get_review_dates(html)
   ratings <- get_star_rating(html)[-1] ## (ici : *)
   prgs <- c(prgs, "#")
   ## Permet surtout de vérifier si ça n'a pas crashé
   cat(prgs)
   ## Création du tibble
-  combined_data <- tibble(reviewer = reviewer_names, 
-                   date = dates,       
+  combined_data <- tibble(reviewer = reviewer_names,
+                   date = dates,
                    rating = ratings,
                    review = reviews
                    )
@@ -191,15 +191,15 @@ scrape_write_table <- function(url,cie_name){
     ## Récupération du nombre de sous page
     latest_page_number <- get_last_page(first_page)
     list_of_pages <- str_c(url, '?page=', 1:latest_page_number)
-    # Apply the extraction and bind the individual results back into one table, 
+    # Apply the extraction and bind the individual results back into one table,
     # which is then written as a tsv file into the working directory
-    list_of_pages %>% 
+    list_of_pages %>%
       # Apply to all URLs
-      map(get_data_from_url, cie_name) %>%  
+      map(get_data_from_url, cie_name) %>%
       # Combine the tibbles into one tibble
-      bind_rows() %>%                           
+      bind_rows() %>%
       # Write a tab-separated file
-      write_tsv(str_c(cie_name,'.tsv'))  
+      write_tsv(str_c(cie_name,'.tsv'))
 }
 ### Note : Tab-separated values (TSV) est un format texte ouvert représentant des données tabulaires sous forme de « valeurs séparées par des tabulations ».
 
